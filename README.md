@@ -100,14 +100,14 @@ The repository includes a modular visualization engine in `visualizations/` to r
 
 | Figure # | Script File | Output Image File | Description |
 |---|---|---|---|
-| **Figure 4.1** | [`fig1_dataset_distribution.py`](visualizations/fig1_dataset_distribution.py) | `fig4_1_dataset_distribution.*` | Neutralization class balance & representation counts |
-| **Figure 4.2** | [`fig2_partition_splits.py`](visualizations/fig2_partition_splits.py) | `fig4_2_partition_splits.*` | Train, test, and held-out pair counts per experiment |
-| **Figure 4.3** | [`fig3_sequence_lengths.py`](visualizations/fig3_sequence_lengths.py) | `fig4_3_sequence_lengths.*` | Sequence length distributions for Heavy+Light antibodies and antigens |
-| **Figure 4.4** | [`fig4_esm_embedding_pca.py`](visualizations/fig4_esm_embedding_pca.py) | `fig4_4_esm_embedding_pca.*` | 2D PCA projection of raw 320-dim ESM-2 sequence embeddings |
-| **Figure 5.1** | [`fig5_fused_feature_pca.py`](visualizations/fig5_fused_feature_pca.py) | `fig5_1_fused_feature_pca.*` | PCA & t-SNE projections of Graph Transformer node and graph representations |
+| **Figure 4.1** | [`fig1_dataset_distribution.py`](visualizations/fig1_dataset_distribution.py) | `fig4_1_dataset_distribution.png` | Neutralization class balance & representation counts |
+| **Figure 4.2** | [`fig2_partition_splits.py`](visualizations/fig2_partition_splits.py) | `fig4_2_partition_splits.png` | Train, test, and held-out pair counts per experiment |
+| **Figure 4.3** | [`fig3_sequence_lengths.py`](visualizations/fig3_sequence_lengths.py) | `fig4_3_sequence_lengths.png` | Sequence length distributions for Heavy+Light antibodies and antigens |
+| **Figure 4.4** | [`fig4_esm_embedding_pca.py`](visualizations/fig4_esm_embedding_pca.py) | `fig4_4_esm_embedding_pca.png` | 2D PCA projection of raw 320-dim ESM-2 sequence embeddings |
+| **Figure 5.1** | [`fig5_fused_feature_pca.py`](visualizations/fig5_fused_feature_pca.py) | `fig5_1_fused_feature_pca.png` | PCA & t-SNE projections of Graph Transformer node and graph representations |
 | **Figure 6.1** | [`fig6_benchmark_performance.py`](visualizations/fig6_benchmark_performance.py) | `fig6_1_benchmark_performance.png` | Benchmark performance metrics (AUROC & AUPRC across 4 splits) |
-| **Figure 6.2** | [`fig7_generalization_degradation.py`](visualizations/fig7_generalization_degradation.py) | `fig6_2_generalization_degradation.*` | Generalization degradation curve across holdout partitions |
-| **Figure 6.3** | [`fig8_model_diagnostics.py`](visualizations/fig8_model_diagnostics.py) | `fig6_3_model_diagnostics.*` | ROC curves, Precision-Recall curves, Calibration & Confidence profiles |
+| **Figure 6.2** | [`fig7_generalization_degradation.py`](visualizations/fig7_generalization_degradation.py) | `fig6_2_generalization_degradation.png` | Generalization degradation curve across holdout partitions |
+| **Figure 6.3** | [`fig8_model_diagnostics.py`](visualizations/fig8_model_diagnostics.py) | `fig6_3_model_diagnostics.png` | ROC curves, Precision-Recall curves, Calibration & Confidence profiles |
 
 To execute all visualization scripts:
 ```bash
@@ -118,44 +118,51 @@ python3 visualizations/run_all_visualizations.py
 
 ## 🖼️ Thesis Visualizations Gallery
 
-### Figure 4.1 — Dataset Composition & Target Class Distribution *(Pending)*
-*Figure 4.1: Neutralization class balance and representation counts across interaction pairs. (To be rendered after visualization pipeline execution).*
+### Figure 4.1 — Dataset Composition & Target Class Distribution
+![Figure 4.1](visualizations/figures/fig4_1_dataset_distribution.png)
+*Figure 4.1: Neutralization class balance ($58.9\%$ neutralizing, $41.1\%$ non-neutralizing) and representation counts for top antibodies and viral strains.*
 
 ---
 
-### Figure 4.2 — Generalization Partitioning & Data Split Breakdown *(Pending)*
-*Figure 4.2: Pair distribution breakdown showing training and testing pair counts across all four biological holdout experiments. (To be rendered after visualization pipeline execution).*
+### Figure 4.2 — Generalization Partitioning & Data Split Breakdown
+![Figure 4.2](visualizations/figures/fig4_2_partition_splits.png)
+*Figure 4.2: Pair distribution breakdown showing training ($n_{\text{train}}$) and testing ($n_{\text{test}}$) pair counts across all four biological holdout experiments.*
 
 ---
 
-### Figure 4.3 — Sequence Length Distribution of Antibodies and Antigens *(Pending)*
-*Figure 4.3: Sequence length histograms for combined Heavy+Light antibody chains and envelope antigens. (To be rendered after visualization pipeline execution).*
+### Figure 4.3 — Sequence Length Distribution of Antibodies and Antigens
+![Figure 4.3](visualizations/figures/fig4_3_sequence_lengths.png)
+*Figure 4.3: Sequence length histograms for combined Heavy+Light antibody chains (mean $= 664.2$ aa) and envelope antigens (mean $= 861.5$ aa).*
 
 ---
 
-### Figure 4.4 — Principal Component Analysis (PCA) of ESM-2 Sequence Embeddings *(Pending)*
-*Figure 4.4: 2D PCA feature space manifolds for raw mean-pooled ESM-2 embeddings. (To be rendered after visualization pipeline execution).*
+### Figure 4.4 — Principal Component Analysis (PCA) of ESM-2 Sequence Embeddings
+![Figure 4.4](visualizations/figures/fig4_4_esm_embedding_pca.png)
+*Figure 4.4: 2D PCA feature space manifolds for raw ESM-2 (`esm2_t6_8M_UR50D`) sequence embeddings across antibodies ($n=235$) and viral strains ($n=749$).*
 
 ---
 
-### Figure 5.1 — Dimensionality Reduction (PCA & t-SNE) of Graph Latent Vectors *(Pending)*
-*Figure 5.1: Low-dimensional feature projections (PCA and t-SNE) of Graph Transformer latent representations. (To be rendered after visualization pipeline execution).*
+### Figure 5.1 — Dimensionality Reduction (PCA & t-SNE) of Graph Latent Vectors
+![Figure 5.1](visualizations/figures/fig5_1_fused_feature_pca.png)
+*Figure 5.1: Low-dimensional feature projections (PCA and t-SNE) of Graph Transformer latent representations.*
 
 ---
 
 ### Figure 6.1 — Benchmark Performance Comparison Across Generalization Boundaries
 ![Figure 6.1](visualizations/figures/fig6_1_benchmark_performance.png)
-*Figure 6.1: Benchmark classification performance (AUROC and AUPRC) for the ESM-Mamba Graph Transformer (`esm-gt`) across the four experimental partitions relative to random chance ($0.50$).*
+*Figure 6.1: Benchmark classification performance (AUROC in purple, AUPRC in violet) for the ESM-Mamba Graph Transformer (`esm-gt`) across the four experimental partitions.*
 
 ---
 
-### Figure 6.2 — Generalization Degradation Curve & Entity Holdout Asymmetry *(Pending)*
-*Figure 6.2: Degradation curve illustrating performance transition from interpolation baseline to double holdout. (To be rendered after visualization pipeline execution).*
+### Figure 6.2 — Generalization Degradation Curve & Entity Holdout Asymmetry
+![Figure 6.2](visualizations/figures/fig6_2_generalization_degradation.png)
+*Figure 6.2: Generalization degradation curve illustrating performance transition from interpolation baseline to double holdout.*
 
 ---
 
-### Figure 6.3 — Model Diagnostic Profiles (ROC, PR, Calibration, & Confidence) *(Pending)*
-*Figure 6.3: Comprehensive diagnostic profiles showing ROC curves, Precision-Recall curves, and prediction confidence distributions. (To be rendered after visualization pipeline execution).*
+### Figure 6.3 — Model Diagnostic Profiles (ROC, PR, Calibration, & Confidence)
+![Figure 6.3](visualizations/figures/fig6_3_model_diagnostics.png)
+*Figure 6.3: Comprehensive diagnostic profiles showing (A) ROC curves, (B) Precision-Recall curves, (C) Probability calibration curves, and (D) Prediction confidence density distributions across all experiments.*
 
 ---
 
@@ -188,7 +195,7 @@ Esm-Mamba-Graph_Transformer/
 │   ├── fig7_generalization_degradation.py
 │   ├── fig8_model_diagnostics.py
 │   ├── run_all_visualizations.py
-│   └── figures/              #   Exported 300 DPI PNG & vector PDF figure artifacts
+│   └── figures/              #   Exported 300 DPI PNG figure artifacts
 │
 ├── experiment_1_random/      # Exp 1: Random Split (Interpolation Baseline)
 │   ├── train_gt.py, data/{train.csv, test.csv}, results/{results.json, best_model.pt}
