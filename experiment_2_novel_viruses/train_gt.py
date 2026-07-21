@@ -1,0 +1,271 @@
+# -*- coding: utf-8 -*-
+"""
+train_gt.py - Experiment 2: Novel Viruses
+End-to-end MambaCross Graph Transformer network trainer for Experiment 2 (Novel Viruses).
+"""
+import os
+import sys
+import json
+import argparse
+import torch
+import torch.nn as nn
+import torch.utils.data as Data
+from torch.amp import autocast, GradScaler
+import pandas as pd
+import numpy as np
+
+# Path setup to import shared modules
+EXPERIMENT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(EXPERIMENT_DIR)
+SHARED_DIR = os.path.join(PROJECT_ROOT, 'shared')
+sys.path.insert(0, SHARED_DIR)
+
+from Models import MambaCross
+from Toolkit import set_seed_all, Metrics, make_dir, AntibodyAntigenDataset, custom_collate_fn
+
+# Experiment Config
+SEED = 42
+SPLIT_COL = 'vir_block'
+EXP_NAME = 'experiment_2_novel_viruses'
+DATA_ROOT = os.path.join(PROJECT_ROOT, '..', 'Esm-Mamba-Neural', 'Data', 'HIV')
+EMBEDDINGS_ROOT = os.path.join(PROJECT_ROOT, '..', 'Esm-Mamba-Neural', 'Outputs', 'Pretrained_HIV')
+PARAMS_PATH = os.path.join(SHARED_DIR, 'Param_Model.json')
+
+device = torch.device(
+    "cuda" if torch.cuda.is_available()
+    else "mps" if torch.backends.mps.is_available()
+    else "cpu"
+)
+set_seed_all(SEED)
+
+if torch.cuda.is_available():
+    torch.backends.cudnn.benchmark = True
+    if hasattr(torch, 'set_float32_matmul_precision'):
+        torch.set_float32_matmul_precision('high')
+
+
+def load_split():
+    """Load train/test pairs for Novel Viruses partitioning (prefer local folder CSVs)."""
+    train_csv = os.path.join(EXPERIMENT_DIR, 'data', 'train.csv')
+    test_csv  = os.path.join(EXPERIMENT_DIR, 'data', 'test.csv')
+    
+    if os.path.exists(train_csv) and os.path.exists(test_csv):
+        train_df = pd.read_csv(train_csv)
+        test_df  = pd.read_csv(test_csv)
+        ab_col = 'antibody_id' if 'antibody_id' in train_df.columns else 'ab_name'
+        ag_col = 'virus_id' if 'virus_id' in train_df.columns else 'ag_name'
+        lbl_col = 'neut' if 'neut' in train_df.columns else 'label'
+        train_pairs = list(zip(train_df[ab_col], train_df[ag_col], train_df[lbl_col]))
+        test_pairs  = list(zip(test_df[ab_col],  test_df[ag_col],  test_df[lbl_col]))
+        print(f"[Exp 2 - Novel Viruses] Loaded directly from local folder: {len(train_pairs)} Train, {len(test_pairs)} Test pairs.")
+        return train_pairs, test_pairs
+
+    # Fallback to master dataset split column in Neural repo
+    pairs_df = pd.read_csv(os.path.join(DATA_ROOT, 'ab_ag_pair.csv'), low_memory=False)
+    train_df = pairs_df[pairs_df[SPLIT_COL] == 'train']
+    test_df  = pairs_df[pairs_df[SPLIT_COL] == 'test']
+
+    train_pairs = list(zip(train_df['ab_name'], train_df['ag_name'], train_df['label']))
+    test_pairs  = list(zip(test_df['ab_name'],  test_df['ag_name'],  test_df['label']))
+    print(f"[Exp 2 - Novel Viruses] Loaded from ab_ag_pair.csv: {len(train_pairs)} Train, {len(test_pairs)} Test pairs.")
+    return train_pairs, test_pairs
+
+
+def filter_pairs(pairs):
+    """Keep only pairs whose pre-extracted ESM-2 .npy files exist on disk."""
+    filtered = []
+    for pair in pairs:
+        ab_id = str(pair[0]).replace('/', '_')
+        ag_id = str(pair[1])
+        ab_path = os.path.join(EMBEDDINGS_ROOT, 'ab', f'{ab_id}.npy')
+        ag_path = os.path.join(EMBEDDINGS_ROOT, 'ag', f'{ag_id}.npy')
+        if os.path.exists(ab_path) and os.path.exists(ag_path):
+            filtered.append(pair)
+    return filtered
+
+
+def apply_sampling(pairs, fraction, seed):
+    """Apply stratified sampling to reduce dataset size for quick execution."""
+    df = pd.DataFrame(pairs, columns=['antibody_id', 'virus_id', 'neut'])
+    sampled_df = df.groupby('neut', group_keys=False).apply(
+        lambda x: x.sample(frac=fraction, random_state=seed)
+    ).reset_index(drop=True)
+    return list(zip(sampled_df['antibody_id'], sampled_df['virus_id'], sampled_df['neut']))
+
+
+def export_split_csvs(train_pairs, test_pairs, data_dir):
+    """Export the partition CSVs into the experiment data/ folder."""
+    make_dir(data_dir)
+    for name, pairs in [('train', train_pairs), ('test', test_pairs)]:
+        df = pd.DataFrame(pairs, columns=['antibody_id', 'virus_id', 'neut'])
+        df.to_csv(os.path.join(data_dir, f'{name}.csv'), index=False)
+        df.to_csv(os.path.join(EXPERIMENT_DIR, f'{name}.csv'), index=False)
+
+
+def main(epochs=30, batch_size=32, sampling=True, sample_fraction=0.15):
+    results_dir = os.path.join(EXPERIMENT_DIR, 'results')
+    data_dir    = os.path.join(EXPERIMENT_DIR, 'data')
+    make_dir(results_dir)
+
+    train_pairs, test_pairs = load_split()
+    train_filtered = filter_pairs(train_pairs)
+    test_filtered  = filter_pairs(test_pairs)
+
+    print(f"[Exp 2 - Novel Viruses] Filtered: {len(train_filtered)} Train, {len(test_filtered)} Test pairs.")
+    
+    if sampling:
+        train_filtered = apply_sampling(train_filtered, sample_fraction, SEED)
+        test_filtered = apply_sampling(test_filtered, sample_fraction, SEED)
+        print(f"[Exp 2 - Novel Viruses] Sampled (fraction={sample_fraction}): {len(train_filtered)} Train, {len(test_filtered)} Test pairs.")
+
+    if len(train_filtered) == 0 or len(test_filtered) == 0:
+        print("ERROR: No valid ESM-2 embeddings found. Ensure path is correct.")
+        return None
+
+    export_split_csvs(train_filtered, test_filtered, data_dir)
+
+    with open(PARAMS_PATH, 'r') as f:
+        params = json.load(f)
+
+    thres_ab = 256
+    thres_ag = 256
+
+    use_cuda = device.type == 'cuda'
+    loader_kwargs = dict(
+        pin_memory=use_cuda,
+        num_workers=0,
+    )
+    train_dataset = AntibodyAntigenDataset(train_filtered)
+    test_dataset  = AntibodyAntigenDataset(test_filtered)
+    train_loader = Data.DataLoader(train_dataset, batch_size=batch_size,
+                                   shuffle=True, drop_last=True,
+                                   collate_fn=custom_collate_fn, **loader_kwargs)
+    test_loader  = Data.DataLoader(test_dataset, batch_size=batch_size,
+                                   shuffle=False, drop_last=False,
+                                   collate_fn=custom_collate_fn, **loader_kwargs)
+
+    model = MambaCross(
+        hor_dim=thres_ag, ver_dim=thres_ab,
+        feat_dim=params['latent_dim'],
+        seq_len=thres_ab + thres_ag,
+        hidden_sizes=params['decoder_hidden_dims'],
+        mamba_layer=params['mamba_layer'],
+        pooling=params['pooling_way'],
+        activation=params['activation'],
+        drop_ratio=params['dropout'],
+        hidden_dim=params.get('hidden_dim', 128),
+        num_gt_layers=params.get('num_gt_layers', 2),
+        gt_heads=params.get('gt_heads', 4),
+        k_contacts=params.get('k_contacts', 5)
+    ).to(device)
+
+    optimizer = torch.optim.Adam(model.parameters(), lr=params['learning_rate'])
+    criterion = nn.BCELoss()
+
+    amp_enabled = use_cuda
+    amp_dtype = torch.bfloat16 if use_cuda else torch.float32
+    scaler = GradScaler(enabled=amp_enabled)
+
+    best_auc = 0.0
+    best_metrics = {}
+    start_epoch = 0
+    checkpoint_path = os.path.join(results_dir, 'checkpoint.pt')
+    if os.path.exists(checkpoint_path):
+        try:
+            checkpoint = torch.load(checkpoint_path, map_location=device)
+            model.load_state_dict(checkpoint['model_state_dict'])
+            optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            start_epoch = checkpoint['epoch']
+            best_auc = checkpoint['best_auc']
+            best_metrics = checkpoint.get('best_metrics', {})
+            print(f"-> Resuming Exp 2 from checkpoint: epoch {start_epoch} (best AUC so far: {best_auc:.4f})")
+        except Exception as e:
+            print(f"Could not load checkpoint: {e}. Starting from scratch.")
+
+    print(f"Training Exp 2 (Novel Viruses) on {device} from epoch {start_epoch+1} to {epochs}..." if start_epoch > 0
+          else f"Training Exp 2 (Novel Viruses) on {device} for {epochs} epochs...")
+          
+    for epoch in range(start_epoch, epochs):
+        model.train()
+        epoch_loss = 0
+        for ab_embs, ag_embs, labels in train_loader:
+            ab_embs = ab_embs.to(device, non_blocking=True)
+            ag_embs = ag_embs.to(device, non_blocking=True)
+            labels  = labels.to(device, non_blocking=True)
+            optimizer.zero_grad()
+            with autocast(device_type=device.type, dtype=amp_dtype, enabled=amp_enabled):
+                outputs = model(ab_embs, ag_embs)
+            loss = criterion(outputs.float(), labels.float())
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
+            epoch_loss += loss.item()
+
+        model.eval()
+        y_true, y_pred = [], []
+        with torch.no_grad():
+            for ab_embs, ag_embs, labels in test_loader:
+                ab_embs = ab_embs.to(device, non_blocking=True)
+                ag_embs = ag_embs.to(device, non_blocking=True)
+                outputs = model(ab_embs, ag_embs)
+                y_true.extend(labels.cpu().numpy())
+                y_pred.extend(outputs.cpu().numpy())
+
+        auc_score, aupr_score, f1_value, acc_score = Metrics(y_true, y_pred)
+        avg_loss = epoch_loss / len(train_loader)
+        print(f"  [Exp 2] Epoch {epoch+1:>2}/{epochs} Loss={avg_loss:.4f} AUC={auc_score:.4f} AUPRC={aupr_score:.4f}")
+
+        if auc_score > best_auc:
+            best_auc = auc_score
+            best_metrics = {
+                "Experiment": EXP_NAME,
+                "Split Column": SPLIT_COL,
+                "Train n": len(train_filtered),
+                "Test n": len(test_filtered),
+                "Test %neutralizing": round(float(np.mean(y_true)) * 100, 2),
+                "AUROC": round(float(auc_score), 4),
+                "AUPRC": round(float(aupr_score), 4),
+                "Accuracy": round(float(acc_score), 4),
+                "F1 Score": round(float(f1_value), 4),
+                "Best Epoch": epoch + 1
+            }
+            torch.save(model.state_dict(), os.path.join(results_dir, 'best_model.pt'))
+
+        # Save epoch checkpoint
+        try:
+            checkpoint_data = {
+                'epoch': epoch + 1,
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'best_auc': best_auc,
+                'best_metrics': best_metrics
+            }
+            torch.save(checkpoint_data, checkpoint_path)
+        except Exception as e:
+            print(f"Warning: could not save checkpoint: {e}")
+
+    results_json = os.path.join(results_dir, 'results.json')
+    with open(results_json, 'w') as f:
+        json.dump(best_metrics, f, indent=4)
+
+    # Clean up checkpoint on successful completion
+    if os.path.exists(checkpoint_path):
+        try:
+            os.remove(checkpoint_path)
+        except Exception as e:
+            pass
+
+    print(f"[Success] [Exp 2] Best AUC={best_auc:.4f} (epoch {best_metrics.get('Best Epoch')}). Saved -> {results_json}")
+    return best_metrics
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Train ESM-Mamba Graph Transformer on Experiment 2 (Novel Viruses)")
+    parser.add_argument('--epochs', type=int, default=30)
+    parser.add_argument('--batch_size', type=int, default=32)
+    parser.add_argument('--sampling', type=str, default='True')
+    parser.add_argument('--fraction', type=float, default=0.15)
+    args = parser.parse_args()
+    
+    is_sampling = args.sampling.lower() == 'true'
+    main(args.epochs, args.batch_size, is_sampling, args.fraction)

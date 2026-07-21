@@ -1,0 +1,12 @@
+{
+    "Experiment": "experiment_1_random",
+    "Split Column": "random",
+    "Train n": 8970,
+    "Test n": 2240,
+    "Test %neutralizing": 58.88,
+    "AUROC": 0.8372,
+    "AUPRC": 0.8857,
+    "Accuracy": 0.4112,
+    "F1 Score": 0.0,
+    "Best Epoch": 10
+}

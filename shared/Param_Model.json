@@ -1,0 +1,14 @@
+{
+    "learning_rate": 0.0001,
+    "batchsize": 32,
+    "dropout": 0.4,
+    "decoder_hidden_dims": [256, 64],
+    "latent_dim": 320,
+    "pooling_way": "avg",
+    "activation": "SiLU",
+    "mamba_layer": 2,
+    "hidden_dim": 128,
+    "num_gt_layers": 2,
+    "gt_heads": 4,
+    "k_contacts": 5
+}

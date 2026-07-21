@@ -1,0 +1,12 @@
+{
+    "Experiment": "experiment_4_both_novel",
+    "Split Column": "both_block",
+    "Train n": 5216,
+    "Test n": 1096,
+    "Test %neutralizing": 56.75,
+    "AUROC": 0.6961,
+    "AUPRC": 0.7364,
+    "Accuracy": 0.4325,
+    "F1 Score": 0.0,
+    "Best Epoch": 4
+}

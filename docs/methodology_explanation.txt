@@ -1,0 +1,98 @@
+================================================================================
+METHODOLOGY EXPLANATION: ESM-MAMBA GRAPH TRANSFORMER PIPELINE
+================================================================================
+
+This document details the exact experimental methodology, mathematical formulation,
+relational graph construction, dynamic contact topology, and training workflows
+used in the ESM-Mamba Graph Transformer (MambaCross-GT / `esm-gt`) pipeline.
+
+--------------------------------------------------------------------------------
+1. DATASET CLEANING & BIOLOGICAL GENERALIZATION BOUNDARIES
+--------------------------------------------------------------------------------
+The benchmark dataset is derived from the HIV CATNAP interaction database, comprising
+74,730 total antibody-antigen interaction pairs across 235 unique neutralizing
+antibodies (bNAbs) and 749 viral envelope glycoprotein strains (gp120/gp160).
+
+To systematically evaluate model performance from interpolation to bi-directional
+extrapolation, the dataset is partitioned into four distinct biological holdout regimes:
+
+1) Experiment 1 – Random Split (Interpolation Baseline):
+   - Standard 80/20 random split. Antibody and antigen entities overlap between
+     training and test sets in different pair combinations.
+   - Evaluates baseline neural relational learning capacity.
+
+2) Experiment 2 – Novel Viruses (Antigen Holdout):
+   - 541 unique viral envelope strains are strictly excluded from training.
+   - Evaluates zero-shot generalization against unseen viral escape variants.
+
+3) Experiment 3 – Novel Antibodies (Antibody Holdout):
+   - 137 unique broad neutralizing antibodies are strictly excluded from training.
+   - Evaluates zero-shot prediction capacity for newly candidate therapeutic bNAbs.
+
+4) Experiment 4 – Both Novel (Bi-directional Extrapolation / Double Holdout):
+   - Both antibody and viral strain in test pairs are completely unseen during training.
+   - 32,650 single-novel overlap pairs are removed to prevent data leakage.
+   - Tests bi-directional extrapolation capabilities at uncharacterized interfaces.
+
+--------------------------------------------------------------------------------
+2. RELATIONAL GRAPH CONSTRUCTION & DYNAMIC INTERACTION TOPOLOGY
+--------------------------------------------------------------------------------
+For every antibody-antigen pair, we construct a relational graph G = (V, E)
+where nodes represent sequence residue regions and edges represent physical backbone
+connectivity and dynamic paratope-epitope interactions.
+
+Step 2.1: Node Definition and Feature Projections
+- Total Nodes N = 512 per pair:
+  * Nodes 0 to 255: Antibody paratope region (downsampled sequence length L_ab = 256).
+  * Nodes 256 to 511: Antigen epitope region (downsampled sequence length L_ag = 256).
+- Initial Node Representations H_i in R^128 combine two complementary features:
+  1) Raw ESM-2 Embeddings: Pre-trained residue embeddings X_ab in R^(256 x 320) and
+     X_ag in R^(256 x 320) from Meta AI's esm2_t6_8M_UR50D model are projected via
+     a linear transformation: H_esm = Linear_320to128(concat(X_ab, X_ag)).
+  2) VMamba 2D Selective State-Space Sweeps: Bilinear contact map C = X_ab * W * X_ag^T
+     undergoes directional sweeps yielding contextual interaction features X_ab_mamba and
+     X_ag_mamba, projected to H_mamba in R^128.
+- Final Node Feature Matrix: H_node = H_esm + H_mamba (shape: N x 128).
+
+Step 2.2: Edge Construction (Sequence Backbone + Top-k Dynamic Contacts)
+1) Structural Sequence Backbone Edges:
+   - Sequential 1D backbone connections enforce physical peptide bond continuity.
+   - Antibody backbone edges: (i, i+1) and (i+1, i) for i in [0, 254].
+   - Antigen backbone edges: (256+i, 256+i+1) and (256+i+1, 256+i) for i in [0, 254].
+2) Dynamic Paratope-Epitope Contact Edges:
+   - Computed from the learnable bilinear matrix C = X_ab * W * X_ag^T.
+   - For each antibody node i, the top-k (k = 5) antigen nodes j with highest contact
+     scores in C_i are selected.
+   - Bidirectional contact edges (i, 256+j) and (256+j, i) are added dynamically.
+   - This creates a sparse, interaction-focused graph topology connecting binding interfaces.
+
+--------------------------------------------------------------------------------
+3. GRAPH TRANSFORMER CONVOLUTION & DECODER ARCHITECTURE
+--------------------------------------------------------------------------------
+Step 3.1: Multi-Head Graph Transformer Attention
+- We stack 2 TransformerConv Graph Transformer layers with 4 attention heads.
+- Each TransformerConv layer performs multi-head self-attention over node features
+  along the structural backbone and dynamic contact edges:
+  h_i' = W_1 * h_i + sum_{j in N(i)} alpha_{i,j} * W_2 * h_j
+  where attention weights alpha_{i,j} are dynamically computed over edge connections.
+
+Step 3.2: Graph-Level Aggregation & Classification MLP
+- Global Pooling: Node representations are aggregated across all 512 nodes using both
+  global mean pooling and global max pooling:
+  Z = concat(global_mean_pool(H_out), global_max_pool(H_out))  (shape: 256-d).
+- Classification Decoder: Z is passed through a multi-layer perceptron (MLP) with
+  BatchNorm, SiLU activation functions, and Dropout (0.1):
+  h1 = SiLU(BatchNorm1d(Linear(256 -> 128)(Z)))
+  logits = Linear(128 -> 1)(h1)
+  y_pred = Sigmoid(logits)
+
+--------------------------------------------------------------------------------
+4. OPTIMIZATION & TRAINING PIPELINE
+--------------------------------------------------------------------------------
+- Loss Function: Binary Cross-Entropy (BCE) loss between predicted neutralization
+  probabilities and ground truth binary labels.
+- Optimizer: Adam optimizer (learning rate = 1e-4).
+- Acceleration: Mixed-precision (bfloat16 AMP) utilizing native Tensor Cores.
+- Vectorized Batching: PyTorch Geometric graph collation is fully vectorized across
+  batches without explicit Python graph construction loops.
+================================================================================

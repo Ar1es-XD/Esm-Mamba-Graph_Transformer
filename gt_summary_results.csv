@@ -1,0 +1,5 @@
+Experiment,Train n,Test n,Test %neut,Best Epoch,AUROC,AUPRC,Accuracy,F1
+Experiment 1 – Random Split,8970,2240,58.88%,10,0.8372,0.8857,0.4112,0.0000
+Experiment 2 – Novel Viruses,9183,2027,60.38%,8,0.8625,0.9057,0.3981,0.0065
+Experiment 3 – Novel Antibodies,8686,2524,59.67%,6,0.8314,0.8862,0.4033,0.0000
+Experiment 4 – Both Novel (Double Holdout),5216,1096,56.75%,4,0.6961,0.7364,0.4325,0.0000

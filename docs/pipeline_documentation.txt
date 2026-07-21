@@ -1,0 +1,79 @@
+================================================================================
+ESM-MAMBA GRAPH TRANSFORMER: PIPELINE DOCUMENTATION
+================================================================================
+
+This document chronicles the full end-to-end process, benchmarks, architectural
+design, and setup instructions for the ESM-Mamba Graph Transformer (`esm-gt`)
+pipeline.
+
+--------------------------------------------------------------------------------
+1. PIPELINE OVERVIEW & REPOSITORY STRUCTURE
+--------------------------------------------------------------------------------
+The repository is structured to ensure clean, modular execution of graph neural network
+training and figure generation:
+
+* shared/
+  - Models.py: Defines the MambaCross-GT architecture (ESM-2 projections, 2D VMamba
+    sweeps, dynamic paratope-epitope graph construction, TransformerConv layers,
+    and MLP classification decoder).
+  - Pretrained.py: Phase A ESM-2 embedding extraction helper module.
+  - Toolkit.py: Dataset loaders, metrics calculation (AUROC, AUPRC, Accuracy, F1),
+    and embedding cache retriever.
+  - Loader.py: Helper utility for dataset splitting and batch management.
+  - Param_Model.json: Configuration parameters for model architecture.
+
+* docs/
+  - methodology_explanation.txt: Mathematical formulation & graph construction.
+  - pipeline_documentation.txt: Comprehensive system & pipeline guide.
+  - scientific_review.txt: Scientific rationale & structural attention review.
+  - changelog.txt: Chronological record of updates and execution runs.
+  - verification_report.txt: Verification report for model weights & checkpoints.
+  - scripts/:
+    * organize_results.py: Results consolidation script.
+    * plot_results.py: Benchmark performance plotting utility.
+    * verify_weights.py: Checkpoint validation script.
+
+* visualizations/
+  - fig1_dataset_distribution.py to fig8_model_diagnostics.py: Modular figure scripts.
+  - run_all_visualizations.py: Master figure generation runner.
+  - figures/: Export directory for rendered publication figures.
+
+* experiment_1_random/ (Exp 1: Random Split)
+* experiment_2_novel_viruses/ (Exp 2: Novel Viruses Holdout)
+* experiment_3_novel_antibodies/ (Exp 3: Novel Antibodies Holdout)
+* experiment_4_both_novel/ (Exp 4: Both Novel Double Holdout)
+  - Inside each: train_gt.py training script, data/ directory, and results/ output folder.
+
+* run_all_experiments.py: Master execution script running all four experiments.
+* gt_summary_results.csv: Consolidated performance summary table.
+
+--------------------------------------------------------------------------------
+2. SETUP & ENVIRONMENT OPTIMIZATIONS
+--------------------------------------------------------------------------------
+1) Memory and Storage Efficiency:
+   * To prevent duplicating ~3.5 GB of pre-extracted ESM-2 sequence embeddings,
+     Toolkit.py dynamically links to pre-extracted embeddings in the parent
+     workspace or local cache.
+
+2) PyTorch Geometric Vectorization:
+   * Graph construction for peptide backbones and top-k dynamic contact edges is
+     fully vectorized using PyTorch tensor operations, avoiding python loops per batch.
+
+3) Model Architecture & Optimization:
+   * 2 TransformerConv layers with 4 attention heads (128-d node hidden dimension).
+   * Adam optimizer (learning rate = 1e-4) with BCE loss.
+   * Mixed precision (bfloat16 AMP) acceleration.
+
+--------------------------------------------------------------------------------
+3. GRAPH TRANSFORMER BENCHMARK SUMMARY RESULTS
+--------------------------------------------------------------------------------
+Below is the empirical benchmark performance across all four biological generalization
+experiments (saved in gt_summary_results.csv):
+
+                                Experiment  Train n  Test n Test %neut  Best Epoch  AUROC  AUPRC  Accuracy     F1
+               Experiment 1 – Random Split     8970    2240     58.88%          10 0.8372 0.8857    0.4112 0.0000
+              Experiment 2 – Novel Viruses     9183    2027     60.38%           8 0.8625 0.9057    0.3981 0.0065
+           Experiment 3 – Novel Antibodies     8686    2524     59.67%           6 0.8314 0.8862    0.4033 0.0000
+Experiment 4 – Both Novel (Double Holdout)     5216    1096     56.75%           4 0.6961 0.7364    0.4325 0.0000
+
+================================================================================

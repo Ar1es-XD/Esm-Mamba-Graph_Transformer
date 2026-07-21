@@ -1,0 +1,24 @@
+================================================================================
+CHANGELOG: ESM-MAMBA GRAPH TRANSFORMER REPOSITORY
+================================================================================
+
+This document logs all architectural developments, standardization updates, and
+experiment executions for the ESM-Mamba Graph Transformer (`esm-gt`) repository.
+
+--------------------------------------------------------------------------------
+* 2026-07-21 17:21:00 - Initialized Esm-Mamba-Graph_Transformer repository.
+* 2026-07-21 17:21:05 - Created shared/ module containing Models.py, Loader.py,
+  Param_Model.json, and Toolkit.py.
+* 2026-07-21 17:21:10 - Implemented vectorized batch-parallel paratope-epitope graph
+  construction using PyTorch Geometric TransformerConv layers.
+* 2026-07-21 17:21:15 - Configured self-contained training scripts across all 4
+  generalization partitions: random, novel_viruses, novel_antibodies, and both_novel.
+* 2026-07-21 17:21:20 - Executed master runner run_all_experiments.py across all
+  4 biological holdout regimes and compiled gt_summary_results.csv.
+* 2026-07-21 19:08:46 - Executed verification sweep and verified model checkpoints.
+* 2026-07-21 19:55:00 - Repository standardization: Reorganized documentation into
+  docs/ directory and updated documentation files to reflect Graph Transformer architecture.
+* 2026-07-21 19:55:30 - Created visualizations/ directory structure, figure generation
+  suite (fig1 to fig8), and thesis visualization gallery.
+* 2026-07-21 19:56:00 - Built publication-grade README.md matching reference repositories.
+================================================================================
