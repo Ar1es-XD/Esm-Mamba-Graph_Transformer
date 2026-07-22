@@ -62,7 +62,7 @@ The Graph Transformer training pipeline operates across five integrated phases:
 
 ## 🔬 Generalization Experiments & Partitioning
 
-The benchmark dataset comprises **74,730 HIV antibody–antigen interaction pairs** ($235$ unique antibodies and $749$ unique viral strains). The dataset is partitioned into four distinct generalization regimes to evaluate model performance from interpolation to strict bi-directional extrapolation:
+The benchmark dataset comprises **74,730 HIV antibody–antigen interaction pairs** ($685$ unique antibodies and $2,705$ unique viral strains). The dataset is partitioned into four distinct generalization regimes to evaluate model performance from interpolation to strict bi-directional extrapolation:
 
 | # | Partition | Generalization Boundary | Description & Biological Context | Train ($n$) | Test ($n$) | Test % Neut | Held-out Entities |
 |---|---|---|---|---|---|---|---|
@@ -132,13 +132,13 @@ python3 visualizations/run_all_visualizations.py
 
 ### Figure 4.3 — Sequence Length Distribution of Antibodies and Antigens
 ![Figure 4.3](visualizations/figures/fig4_3_sequence_lengths.png)
-*Figure 4.3: Sequence length histograms for combined Heavy+Light antibody chains (mean $= 664.2$ aa) and envelope antigens (mean $= 861.5$ aa).*
+*Figure 4.3: Sequence length histograms for combined Heavy+Light antibody chains (mean $= 260.8$ aa) and envelope antigens (mean $= 856.6$ aa).*
 
 ---
 
 ### Figure 4.4 — Principal Component Analysis (PCA) of ESM-2 Sequence Embeddings
 ![Figure 4.4](visualizations/figures/fig4_4_esm_embedding_pca.png)
-*Figure 4.4: 2D PCA feature space manifolds for raw ESM-2 (`esm2_t6_8M_UR50D`) sequence embeddings across antibodies ($n=235$) and viral strains ($n=749$).*
+*Figure 4.4: 2D PCA feature space manifolds for raw ESM-2 (`esm2_t6_8M_UR50D`) sequence embeddings across antibodies and viral strains in the dataset (using subsamples of $n=600$ in the logistic regression baseline and $n=300$ in the neural network experiment).*
 
 ---
 
