@@ -1,0 +1,15 @@
+Data/
+Outputs/
+experiment_1_random/
+experiment_2_novel_viruses/
+experiment_3_novel_antibodies/
+experiment_4_both_novel/
+visualizations/
+docs/
+shared/
+.venv/
+__pycache__/
+*.npy
+*.pt
+*.bin
+*.csv
